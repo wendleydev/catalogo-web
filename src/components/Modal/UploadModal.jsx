@@ -21,6 +21,7 @@ const UploadModal = ({
   onUpload,
   title = "Adicionar Imagem",
   size = "lg",
+  confirmButtonText = "Adicionar Imagem",
 }) => {
   const [uploadData, setUploadData] = useState({
     title: "",
@@ -172,7 +173,7 @@ const UploadModal = ({
                   onUpload={handleOptimizedUpload}
                   multiple={false}
                   maxFiles={1}
-                  maxFileSize={5 * 1024 * 1024} // 5MB para carrossel
+                  maxFileSize={500 * 1024} // 500KB para carrossel
                   showPreview={false}
                   showProgress={true}
                   className="w-full"
@@ -218,6 +219,7 @@ const UploadModal = ({
 
               <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                 <p>• Se não preencher, serão usados valores padrão</p>
+                <p>• Tamanho máximo da imagem: 500KB</p>
                 <p>• Título padrão: "Slide do Carrossel"</p>
                 <p>
                   • Descrição padrão: "Descrição do slide do carrossel da Feira
@@ -238,7 +240,7 @@ const UploadModal = ({
                   disabled={!uploadData.imageFile}
                   className="flex-1 px-3 py-2 text-sm bg-green-500 hover:bg-green-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
                 >
-                  Adicionar Imagem
+                  {confirmButtonText}
                 </button>
               </div>
             </div>
@@ -256,12 +258,14 @@ UploadModal.propTypes = {
   onUpload: PropTypes.func.isRequired,
   title: PropTypes.string,
   size: PropTypes.oneOf(["sm", "md", "lg", "xl"]),
+  confirmButtonText: PropTypes.string,
 };
 
 // Props padrão
 UploadModal.defaultProps = {
   title: "Adicionar Imagem",
   size: "lg",
+  confirmButtonText: "Adicionar Imagem",
 };
 
 export default UploadModal;

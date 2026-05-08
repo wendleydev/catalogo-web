@@ -26,7 +26,7 @@ import {
   arrayUnion,
   deleteDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../services/firebaseConnection";
 
 import {
@@ -49,6 +49,54 @@ import {
   X,
   User,
 } from "lucide-react";
+
+const isValidImageUrl = (url) =>
+  typeof url === "string" &&
+  /^(https?:\/\/|data:image\/|gs:\/\/)/i.test(url.trim());
+
+const normalizeRawUrl = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/^['"]|['"]$/g, "");
+};
+
+const isStorageRelativePath = (value) =>
+  typeof value === "string" &&
+  /^(slides|vendedores|produtos)\//i.test(value.trim());
+
+const normalizeImageEntry = async (entry, storageRef) => {
+  const rawUrl =
+    entry?.url || entry?.imageUrl || entry?.downloadURL || entry?.image;
+
+  const normalizedRawUrl = normalizeRawUrl(rawUrl);
+
+  if (!isValidImageUrl(normalizedRawUrl) && !isStorageRelativePath(normalizedRawUrl)) {
+    return null;
+  }
+
+  let resolvedUrl = normalizedRawUrl;
+
+  if (resolvedUrl.startsWith("gs://") || isStorageRelativePath(resolvedUrl)) {
+    try {
+      resolvedUrl = await getDownloadURL(ref(storageRef, resolvedUrl));
+    } catch (error) {
+      console.warn("Falha ao converter imagem gs:// de vendedor:", {
+        rawUrl: resolvedUrl,
+        error,
+      });
+      return null;
+    }
+  }
+
+  return { ...entry, url: resolvedUrl };
+};
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Falha ao converter imagem para base64."));
+    reader.readAsDataURL(file);
+  });
 
 // Função para gerar estatísticas dos vendedores
 const getVendedoresStats = (vendedores, produtosAdicionados) => [
@@ -266,14 +314,8 @@ const Vendedor = () => {
       // Se há uma nova imagem, fazer upload
       if (newVendedorImage) {
         try {
-          const imageRef = ref(
-            storage,
-            `vendedores/${bancaId}/${vendedorId}/${newVendedorImage.name}`
-          );
-          const snapshot = await uploadBytes(imageRef, newVendedorImage);
-          const downloadURL = await getDownloadURL(snapshot.ref);
-
-          updateData.images = [{ url: downloadURL }];
+          const base64Image = await fileToDataUrl(newVendedorImage);
+          updateData.images = [{ url: base64Image }];
         } catch (uploadError) {
           console.error("Erro ao fazer upload da imagem:", uploadError);
           showModal(
@@ -390,10 +432,27 @@ const Vendedor = () => {
             `bancas/${bancaId}/vendedores`
           );
           const snapshot = await getDocs(vendedoresCollection);
-          const vendedoresData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const vendedoresData = await Promise.all(
+            snapshot.docs.map(async (vendedorDoc) => {
+              const vendedorData = { id: vendedorDoc.id, ...vendedorDoc.data() };
+              const rawImages = Array.isArray(vendedorData.images)
+                ? vendedorData.images
+                : [];
+
+              const normalizedImages = (
+                await Promise.all(
+                  rawImages.map((imageEntry) =>
+                    normalizeImageEntry(imageEntry, storage)
+                  )
+                )
+              ).filter(Boolean);
+
+              return {
+                ...vendedorData,
+                images: normalizedImages,
+              };
+            })
+          );
           setVendedores(vendedoresData);
         } else {
           console.log("A banca não foi encontrada.");
@@ -725,6 +784,10 @@ const Vendedor = () => {
                         <img
                           src={vendedor.images[0].url}
                           alt={`Imagem de perfil de ${vendedor.nome}`}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = defaultProfileImage;
+                          }}
                           className="relative w-full h-full rounded-full object-cover shadow-2xl border-1 border-white"
                         />
                       ) : (
@@ -1008,6 +1071,10 @@ const Vendedor = () => {
                     ? selectedVendedor.images[0].url 
                     : defaultProfileImage}
                   alt="Foto atual"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = defaultProfileImage;
+                  }}
                   className="w-20 h-20 object-cover rounded-lg mx-auto"
                 />
               </div>
@@ -1016,11 +1083,14 @@ const Vendedor = () => {
                 onUpload={handleOptimizedVendedorUpload}
                 multiple={false}
                 maxFiles={1}
-                maxFileSize={2 * 1024 * 1024} // 2MB para perfil
+                maxFileSize={500 * 1024} // 500KB para perfil
                 showPreview={false}
                 showProgress={true}
                 className="w-full"
               />
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Tamanho máximo da foto: 500KB.
+              </p>
               {newVendedorImage && (
                 <div className="mt-2">
                   <img

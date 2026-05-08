@@ -269,11 +269,14 @@ const NovoVendedorForm = () => {
                     onUpload={handleOptimizedUpload}
                     multiple={false}
                     maxFiles={1}
-                    maxFileSize={2 * 1024 * 1024} // 2MB para perfil
+                    maxFileSize={500 * 1024} // 500KB para perfil
                     showPreview={false}
                     showProgress={true}
                     className="w-full max-w-xs"
                   />
+                  <p className="mt-2 text-xs text-gray-300 text-center">
+                    Tamanho máximo da foto: 500KB.
+                  </p>
                 </div>
               )}
             </div>

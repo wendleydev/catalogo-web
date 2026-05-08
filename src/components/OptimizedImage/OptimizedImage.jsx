@@ -2,6 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PropTypes from 'prop-types';
 
+const INLINE_FALLBACK_IMAGE =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+      <rect width="1200" height="800" fill="#e5e7eb"/>
+      <g fill="#6b7280" font-family="Arial, sans-serif" text-anchor="middle">
+        <text x="600" y="390" font-size="42">Imagem indisponível</text>
+        <text x="600" y="440" font-size="24">Tente novamente mais tarde</text>
+      </g>
+    </svg>
+  `);
+
 /**
  * Componente de imagem otimizada com lazy loading
  */
@@ -10,7 +22,7 @@ const OptimizedImage = ({
   alt,
   className = '',
   placeholder = null,
-  fallback = '/placeholder-image.jpg',
+  fallback = INLINE_FALLBACK_IMAGE,
   width,
   height,
   lazy = true,
@@ -59,6 +71,13 @@ const OptimizedImage = ({
   // Carregamento da imagem
   useEffect(() => {
     if (!isInView) return;
+    if (!src) {
+      setImageSrc(fallback);
+      setIsLoading(false);
+      setError(true);
+      onError?.();
+      return;
+    }
 
     const img = new Image();
     

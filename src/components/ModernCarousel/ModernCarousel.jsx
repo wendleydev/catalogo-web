@@ -2,11 +2,17 @@ import { useState, useCallback, useEffect, memo } from "react";
 import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { ChevronLeft, ChevronRight, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Upload, RefreshCw } from "lucide-react";
 import PropTypes from "prop-types";
 import OptimizedImage from "../OptimizedImage/OptimizedImage";
 
-const ModernCarousel = ({ images, onDeleteSlide, isAdmin, onAddImage }) => {
+const ModernCarousel = ({
+  images,
+  onDeleteSlide,
+  isAdmin,
+  onAddImage,
+  onReplaceImage,
+}) => {
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -191,26 +197,47 @@ const ModernCarousel = ({ images, onDeleteSlide, isAdmin, onAddImage }) => {
 
       {/* Botão de exclusão para admin */}
       {isAdmin && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: isHovered ? 1 : 0.7, scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => {
-            const currentImage = images[selectedIndex];
-            if (!currentImage.id.toString().startsWith("default")) {
-              onDeleteSlide(
-                currentImage.id,
-                currentImage.imageUrl,
-                currentImage.title || "Slide do Carrossel"
-              );
-            }
-          }}
-          className="absolute top-4 right-4 w-10 h-10 bg-red-500/90 hover:bg-red-600/90 text-white rounded-full flex items-center justify-center shadow-xl backdrop-blur-sm transition-all duration-300 z-20"
-          aria-label="Excluir slide atual"
-        >
-          <Trash2 size={18} />
-        </motion.button>
+        <div className="absolute top-4 right-4 flex gap-2 z-20">
+          {onReplaceImage && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: isHovered ? 1 : 0.7, scale: 1 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                const currentImage = images[selectedIndex];
+                if (!currentImage.id.toString().startsWith("default")) {
+                  onReplaceImage(currentImage);
+                }
+              }}
+              className="w-10 h-10 bg-amber-500/90 hover:bg-amber-600/90 text-white rounded-full flex items-center justify-center shadow-xl backdrop-blur-sm transition-all duration-300"
+              aria-label="Substituir imagem do slide atual"
+              title="Substituir imagem"
+            >
+              <RefreshCw size={18} />
+            </motion.button>
+          )}
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: isHovered ? 1 : 0.7, scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              const currentImage = images[selectedIndex];
+              if (!currentImage.id.toString().startsWith("default")) {
+                onDeleteSlide(
+                  currentImage.id,
+                  currentImage.imageUrl,
+                  currentImage.title || "Slide do Carrossel"
+                );
+              }
+            }}
+            className="w-10 h-10 bg-red-500/90 hover:bg-red-600/90 text-white rounded-full flex items-center justify-center shadow-xl backdrop-blur-sm transition-all duration-300"
+            aria-label="Excluir slide atual"
+          >
+            <Trash2 size={18} />
+          </motion.button>
+        </div>
       )}
 
       {/* Botão de adicionar imagem para admin */}
@@ -298,12 +325,14 @@ ModernCarousel.propTypes = {
   ).isRequired,
   onDeleteSlide: PropTypes.func.isRequired,
   onAddImage: PropTypes.func,
+  onReplaceImage: PropTypes.func,
   isAdmin: PropTypes.bool,
 };
 
 ModernCarousel.defaultProps = {
   isAdmin: false,
   onAddImage: null,
+  onReplaceImage: null,
 };
 
 ModernCarousel.displayName = "ModernCarousel";

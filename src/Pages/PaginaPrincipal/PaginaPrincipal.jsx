@@ -42,15 +42,13 @@ import {
   getDocs,
   query,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 
-import { v4 as uuidV4 } from "uuid";
 import { AuthContext } from "../../contexts/AuthContext";
 import {
   ref,
-  uploadBytes,
   getDownloadURL,
-  deleteObject,
 } from "firebase/storage";
 
 // Dados das estatísticas da página principal - Memoizado para performance
@@ -115,6 +113,72 @@ const getFeaturedCategories = () => [
   },
 ];
 
+const defaultSlideSvg = (title) =>
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#16a34a"/>
+          <stop offset="100%" stop-color="#0f766e"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="700" fill="url(#bg)"/>
+      <g fill="#ffffff" text-anchor="middle" font-family="Arial, sans-serif">
+        <text x="600" y="330" font-size="54" font-weight="700">${title}</text>
+        <text x="600" y="390" font-size="28">Feira Livre de Buritizeiro</text>
+      </g>
+    </svg>
+  `);
+
+const isValidImageUrl = (url) =>
+  typeof url === "string" &&
+  /^(https?:\/\/|data:image\/|gs:\/\/)/i.test(url.trim());
+
+const normalizeRawUrl = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/^['"]|['"]$/g, "");
+};
+
+const isStorageRelativePath = (value) =>
+  typeof value === "string" &&
+  /^(slides|vendedores|produtos)\//i.test(value.trim());
+
+const normalizeImageEntry = async (entry, storageRef) => {
+  const rawUrl =
+    entry?.url || entry?.imageUrl || entry?.downloadURL || entry?.image;
+
+  const normalizedRawUrl = normalizeRawUrl(rawUrl);
+
+  if (!isValidImageUrl(normalizedRawUrl) && !isStorageRelativePath(normalizedRawUrl)) {
+    return null;
+  }
+
+  let resolvedUrl = normalizedRawUrl;
+
+  if (resolvedUrl.startsWith("gs://") || isStorageRelativePath(resolvedUrl)) {
+    try {
+      resolvedUrl = await getDownloadURL(ref(storageRef, resolvedUrl));
+    } catch (error) {
+      console.warn("Falha ao converter imagem gs:// de vendedor:", {
+        rawUrl: resolvedUrl,
+        error,
+      });
+      return null;
+    }
+  }
+
+  return { ...entry, url: resolvedUrl };
+};
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Falha ao converter imagem para base64."));
+    reader.readAsDataURL(file);
+  });
+
 // ======================================================= Página Principal
 
 const PaginaPrincipal = () => {
@@ -143,6 +207,10 @@ const PaginaPrincipal = () => {
 
   const [uploadModal, setUploadModal] = useState({
     isOpen: false,
+    mode: "add",
+    slideId: null,
+    currentTitle: "",
+    currentDescription: "",
   });
   const vendedoresRef = useRef(null);
   const navigate = useNavigate();
@@ -150,9 +218,9 @@ const PaginaPrincipal = () => {
   // Imagens padrão do carrossel
   const defaultSliderImages = useMemo(
     () => [
-      "https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      defaultSlideSvg("Bem-vindo"),
+      defaultSlideSvg("Produtos Frescos"),
+      defaultSlideSvg("Tradição Local"),
     ],
     []
   );
@@ -174,20 +242,18 @@ const PaginaPrincipal = () => {
 
   const uploadImageToFirestore = useCallback(
     async (imageFile, userId, title = "", description = "") => {
-      const storageRef = ref(storage, `slides/${userId}/${uuidV4()}`);
       try {
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        const downloadUrl = await getDownloadURL(snapshot.ref);
+        const base64Image = await fileToDataUrl(imageFile);
         const docRef = await addDoc(collection(db, "slides"), {
           userId: userId,
-          imageUrl: downloadUrl,
+          imageUrl: base64Image,
           title: title || "Slide do Carrossel",
           description:
             description ||
             "Descrição do slide do carrossel da Feira Livre de Buritizeiro",
           createdAt: new Date(),
         });
-        return { imageUrl: downloadUrl, docId: docRef.id };
+        return { imageUrl: base64Image, docId: docRef.id };
       } catch (error) {
         console.error("Erro ao fazer upload da imagem:", error);
         throw new Error("Erro ao fazer upload da imagem. Tente novamente.");
@@ -211,8 +277,25 @@ const PaginaPrincipal = () => {
     console.log("Abrindo modal de upload");
     setUploadModal({
       isOpen: true,
+      mode: "add",
+      slideId: null,
+      currentTitle: "",
+      currentDescription: "",
     });
   }, [sliderImages.length, showModal]);
+
+  const handleReplaceSlide = useCallback((slide) => {
+    if (!slide?.id || slide.id.toString().startsWith("default")) return;
+    setUploadModal({
+      isOpen: true,
+      mode: "replace",
+      slideId: slide.id,
+      currentTitle: slide.title || "Slide do Carrossel",
+      currentDescription:
+        slide.description ||
+        "Descrição do slide do carrossel da Feira Livre de Buritizeiro",
+    });
+  }, []);
 
   const handleDeleteSlide = useCallback(
     (id, imageUrl, title = "imagem") => {
@@ -227,7 +310,6 @@ const PaginaPrincipal = () => {
         `Tem certeza que deseja excluir a imagem "${title}"?`,
         async () => {
           try {
-            await deleteObject(ref(storage, imageUrl));
             await deleteDoc(doc(db, "slides", id));
             setSliderImages((prev) => prev.filter((img) => img.id !== id));
             closeModal();
@@ -255,11 +337,41 @@ const PaginaPrincipal = () => {
       if (!uploadData.imageFile) return;
 
       try {
+        const title =
+          uploadData.title ||
+          uploadModal.currentTitle ||
+          "Slide do Carrossel";
+        const description =
+          uploadData.description ||
+          uploadModal.currentDescription ||
+          "Descrição do slide do carrossel da Feira Livre de Buritizeiro";
+
+        if (uploadModal.mode === "replace" && uploadModal.slideId) {
+          const imageUrl = await fileToDataUrl(uploadData.imageFile);
+          await updateDoc(doc(db, "slides", uploadModal.slideId), {
+            imageUrl,
+            title,
+            description,
+            updatedAt: new Date(),
+          });
+
+          setSliderImages((prev) =>
+            prev.map((img) =>
+              img.id === uploadModal.slideId
+                ? { ...img, imageUrl, title, description }
+                : img
+            )
+          );
+
+          showModal("success", "Sucesso!", "Imagem do slide substituída!");
+          return;
+        }
+
         const { imageUrl, docId } = await uploadImageToFirestore(
           uploadData.imageFile,
           user.uid,
-          uploadData.title,
-          uploadData.description
+          title,
+          description
         );
 
         setSliderImages((prev) => [
@@ -267,10 +379,8 @@ const PaginaPrincipal = () => {
           {
             id: docId,
             imageUrl,
-            title: uploadData.title || "Slide do Carrossel",
-            description:
-              uploadData.description ||
-              "Descrição do slide do carrossel da Feira Livre de Buritizeiro",
+            title,
+            description,
           },
         ]);
 
@@ -284,12 +394,16 @@ const PaginaPrincipal = () => {
         );
       }
     },
-    [uploadImageToFirestore, user?.uid, showModal]
+    [uploadImageToFirestore, user?.uid, showModal, uploadModal]
   );
 
   const closeUploadModal = useCallback(() => {
     setUploadModal({
       isOpen: false,
+      mode: "add",
+      slideId: null,
+      currentTitle: "",
+      currentDescription: "",
     });
   }, []);
 
@@ -299,14 +413,48 @@ const PaginaPrincipal = () => {
     const fetchSliderImages = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "slides"));
-        const images = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          imageUrl: doc.data().imageUrl,
-          title: doc.data().title || "Slide do Carrossel",
-          description:
-            doc.data().description ||
-            "Descrição do slide do carrossel da Feira Livre de Buritizeiro",
-        }));
+        const images = (
+          await Promise.all(
+            querySnapshot.docs.map(async (slideDoc) => {
+              const data = slideDoc.data();
+              const rawImageUrl =
+                data.imageUrl || data.url || data.imagemUrl || data.image;
+              const normalizedRawImageUrl = normalizeRawUrl(rawImageUrl);
+
+              if (
+                !isValidImageUrl(normalizedRawImageUrl) &&
+                !isStorageRelativePath(normalizedRawImageUrl)
+              ) {
+                return null;
+              }
+
+              let imageUrl = normalizedRawImageUrl;
+
+              // Compatibilidade: converte gs://... para URL HTTP pública.
+              if (imageUrl.startsWith("gs://") || isStorageRelativePath(imageUrl)) {
+                try {
+                  imageUrl = await getDownloadURL(ref(storage, imageUrl));
+                } catch (error) {
+                  console.warn("Falha ao converter gs:// para URL pública:", {
+                    slideId: slideDoc.id,
+                    imageUrl,
+                    error,
+                  });
+                  return null;
+                }
+              }
+
+              return {
+                id: slideDoc.id,
+                imageUrl,
+                title: data.title || "Slide do Carrossel",
+                description:
+                  data.description ||
+                  "Descrição do slide do carrossel da Feira Livre de Buritizeiro",
+              };
+            })
+          )
+        ).filter(Boolean);
         setSliderImages(
           images.length > 0
             ? images
@@ -379,10 +527,29 @@ const PaginaPrincipal = () => {
           const vendedoresSnapshot = await getDocs(
             query(collection(db, `bancas/${banca.id}/vendedores`))
           );
-          const vendedoresData = vendedoresSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const vendedoresData = (
+            await Promise.all(
+              vendedoresSnapshot.docs.map(async (vendedorDoc) => {
+                const vendedorData = { id: vendedorDoc.id, ...vendedorDoc.data() };
+                const rawImages = Array.isArray(vendedorData.images)
+                  ? vendedorData.images
+                  : [];
+
+                const normalizedImages = (
+                  await Promise.all(
+                    rawImages.map((imageEntry) =>
+                      normalizeImageEntry(imageEntry, storage)
+                    )
+                  )
+                ).filter(Boolean);
+
+                return {
+                  ...vendedorData,
+                  images: normalizedImages,
+                };
+              })
+            )
+          ).filter(Boolean);
           banca.vendedores = vendedoresData;
           
           // Os produtos já estão no documento da banca como array
@@ -499,6 +666,7 @@ const PaginaPrincipal = () => {
               <ModernCarousel
                 images={sliderImages}
                 onDeleteSlide={handleDeleteSlide}
+                onReplaceImage={handleReplaceSlide}
                 isAdmin={user?.role === "admin"}
                 onAddImage={handleCarouselUpload}
                 key={`carousel-${sliderImages.length}`}
@@ -702,7 +870,16 @@ const PaginaPrincipal = () => {
             isOpen={uploadModal.isOpen}
             onClose={closeUploadModal}
             onUpload={handleUploadConfirm}
-            title="Adicionar Imagem ao Carrossel"
+            title={
+              uploadModal.mode === "replace"
+                ? "Substituir Imagem do Slide"
+                : "Adicionar Imagem ao Carrossel"
+            }
+            confirmButtonText={
+              uploadModal.mode === "replace"
+                ? "Substituir Imagem"
+                : "Adicionar Imagem"
+            }
             size="md"
           />
         )}

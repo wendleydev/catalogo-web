@@ -191,6 +191,10 @@ const BancaCard = ({
                     vendedorPrincipal.images?.[0]?.url || defaultVendedorImage
                   }
                   alt={vendedorPrincipal.nome}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = defaultVendedorImage;
+                  }}
                   className="relative w-28 h-28 rounded-full object-cover shadow-xs border-white dark:border-gray-700"
                 />
               </div>
