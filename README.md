@@ -78,7 +78,7 @@ npm run lint
 
 🔗 [Site publicado](https://feiralivre.vercel.app/)
 
-📂 Repositório: [github.com/Wendley007/catalogo-web](https://github.com/Wendley007/catalogo-web)
+📂 Repositório: [github.com/wendleydev/catalogo-web](https://github.com/wendleydev/catalogo-web)
 
 ## 🙋‍♂️ Autor
 

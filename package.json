@@ -2,6 +2,10 @@
   "name": "catalogodafeira",
   "private": true,
   "version": "2.2.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wendleydev/catalogo-web.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
