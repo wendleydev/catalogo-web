@@ -1,39 +1,39 @@
 # Como Utilizar o Componente BancaCard
 
-O componente `BancaCard` foi criado para padronizar e reutilizar a exibição de cards de bancas em todo o projeto da Feira de Buritizeiro. Ele substitui o código duplicado que existia em várias páginas.
+O componente `BancaCard` foi criado para padronizar e reutilizar a exibicao de cards de bancas na pagina de bancas e em listagens relacionadas. Ele substitui codigo duplicado de layout e comportamento.
 
-## 📁 Localização
+## Localizacao
 
 ```
 src/components/BancaCard/
-├── BancaCard.jsx    # Componente principal
-└── index.js         # Arquivo de exportação
+- BancaCard.jsx    # Componente principal
+- index.js         # Arquivo de exportacao
 ```
 
-## 🚀 Importação
+## Importacao
 
 ```jsx
 import BancaCard from "../../components/BancaCard";
 ```
 
-## 📋 Propriedades Disponíveis
+## Propriedades Disponiveis
 
-| Propriedade | Tipo | Padrão | Descrição |
+| Propriedade | Tipo | Padrao | Descricao |
 |-------------|------|--------|-----------|
-| `banca` | Object | **Obrigatório** | Dados da banca |
-| `index` | number | 0 | Índice para animação |
+| `banca` | Object | **Obrigatorio** | Dados da banca |
+| `index` | number | 0 | Indice para animacao |
 | `showAdminControls` | boolean | false | Mostrar controles de admin |
 | `showVendedoresDropdown` | boolean | true | Mostrar dropdown de vendedores |
-| `onEditBanca` | Function | - | Função para editar banca (admin) |
-| `onDeleteBanca` | Function | - | Função para deletar banca (admin) |
-| `onSelectVendedores` | Function | - | Função para selecionar vendedores |
+| `onEditBanca` | Function | - | Funcao para editar banca (admin) |
+| `onDeleteBanca` | Function | - | Funcao para deletar banca (admin) |
+| `onSelectVendedores` | Function | - | Funcao para selecionar vendedores |
 | `selectedBanca` | string | - | ID da banca selecionada |
-| `whatsappMessage` | string | Mensagem padrão | Mensagem para WhatsApp |
-| `acessarBancaText` | string | "Acessar Banca" | Texto do botão |
-| `verVendedoresText` | string | "Ver Vendedores" | Texto do botão |
-| `fecharVendedoresText` | string | "Fechar Vendedores" | Texto do botão |
+| `whatsappMessage` | string | Mensagem padrao | Mensagem para WhatsApp |
+| `acessarBancaText` | string | "Acessar Banca" | Texto do botao |
+| `verVendedoresText` | string | "Ver Vendedores" | Texto do botao |
+| `fecharVendedoresText` | string | "Fechar Vendedores" | Texto do botao |
 
-## 📊 Estrutura de Dados da Banca
+## Estrutura de Dados da Banca
 
 ```javascript
 const banca = {
@@ -55,9 +55,9 @@ const banca = {
 };
 ```
 
-## 🎯 Exemplos de Uso
+## Exemplos de Uso
 
-### 1. **Uso Básico (Página Principal)**
+### 1. **Uso Basico (Pagina Principal)**
 
 ```jsx
 import BancaCard from "../../components/BancaCard";
@@ -81,7 +81,7 @@ const PaginaPrincipal = () => {
           showVendedoresDropdown={true}
           onSelectVendedores={handleSelectVendedores}
           selectedBanca={selectedBanca}
-          whatsappMessage="Olá! Vi sua banca no site da Feira de Buritizeiro e fiquei interessado!"
+          whatsappMessage="Ola! Vi sua banca no site da Feira de Buritizeiro e fiquei interessado!"
           acessarBancaText="Acessar banca"
           verVendedoresText="Ver Vendedores"
           fecharVendedoresText="Fechar Vendedores"
@@ -92,7 +92,7 @@ const PaginaPrincipal = () => {
 };
 ```
 
-### 2. **Com Controles de Admin (Página de Bancas)**
+### 2. **Com Controles de Admin (Pagina de Bancas)**
 
 ```jsx
 import BancaCard from "../../../components/BancaCard";
@@ -123,7 +123,7 @@ const Bancas = () => {
           onDeleteBanca={(banca) => setSelectedBancaToDelete(banca)}
           onSelectVendedores={handleSelectVendedores}
           selectedBanca={selectedBanca}
-          whatsappMessage={`Olá! Vi essa ${banca?.nome} no site da Feira de Buritizeiro e fiquei interessado!`}
+          whatsappMessage={`Ola! Vi essa ${banca?.nome} no site da Feira de Buritizeiro e fiquei interessado!`}
           acessarBancaText="Acessar Banca"
           verVendedoresText="Ver Vendedores"
           fecharVendedoresText="Fechar Vendedores"
@@ -152,38 +152,38 @@ const Bancas = () => {
 <BancaCard
   banca={banca}
   index={index}
-  whatsappMessage="Olá! Vi sua banca no site e gostaria de fazer um pedido!"
+  whatsappMessage="Ola! Vi sua banca no site e gostaria de fazer um pedido!"
   acessarBancaText="Ver Detalhes"
   verVendedoresText="Ver Todos"
   fecharVendedoresText="Fechar"
 />
 ```
 
-## 🎨 Funcionalidades Automáticas
+## Funcionalidades Automaticas
 
 O componente `BancaCard` inclui automaticamente:
 
-### ✅ **Animações**
-- Animação de entrada com delay baseado no índice
+### **Animacoes**
+- Animacao de entrada com delay baseado no indice
 - Hover effects com scale
-- Animações suaves no dropdown
+- Animacoes suaves no dropdown
 
-### ✅ **Responsividade**
+### **Responsividade**
 - Layout responsivo com grid
-- Adaptação para diferentes tamanhos de tela
+- Adaptacao para diferentes tamanhos de tela
 
-### ✅ **Acessibilidade**
-- Títulos e descrições para screen readers
-- Navegação por teclado
+### **Acessibilidade**
+- Titulos e descricoes para screen readers
+- Navegacao por teclado
 - Contraste adequado
 
-### ✅ **Funcionalidades**
+### **Funcionalidades**
 - Dropdown de vendedores adicionais
 - Links para WhatsApp
-- Navegação para página da banca
+- Navegacao para pagina da banca
 - Controles de admin (quando habilitado)
 
-## 🔧 Personalização
+## Personalizacao
 
 ### **Estilos Customizados**
 
@@ -216,54 +216,60 @@ className="bg-white rounded-xl shadow-xl hover:shadow-xl transition-all duration
 />
 ```
 
-## 📱 Funcionalidades do Dropdown
+## Funcionalidades do Dropdown
 
 ### **Vendedores Adicionais**
-- Mostra vendedores além do principal
-- Botão WhatsApp individual para cada vendedor
-- Fechamento automático ao clicar fora
+- Mostra vendedores alem do principal
+- Botao WhatsApp individual para cada vendedor
+- Fechamento automatico ao clicar fora
 
 ### **Controles de Admin**
-- Botões de editar e excluir
-- Integração com modais de confirmação
-- Atualização automática da lista
+- Botoes de editar e excluir
+- Integracao com modais de confirmacao
+- Atualizacao automatica da lista
 
-## 🚨 Tratamento de Erros
+## Tratamento de Erros
 
 O componente trata automaticamente:
 
-- **Vendedores sem imagem**: Usa imagem padrão
-- **Vendedores sem WhatsApp**: Não mostra botão WhatsApp
+- **Vendedores sem imagem**: Usa imagem padrao
+- **Vendedores sem WhatsApp**: Nao mostra botao WhatsApp
 - **Bancas sem vendedores**: Mostra mensagem informativa
-- **Dados incompletos**: Fallbacks para campos obrigatórios
+- **Dados incompletos**: Fallbacks para campos obrigatorios
 
-## 📋 Checklist de Implementação
+## Checklist de Implementacao
 
 Para usar o componente `BancaCard`:
 
 - [ ] Importar o componente
 - [ ] Definir estado para `selectedBanca` (se usar dropdown)
-- [ ] Criar função `handleSelectVendedores` (se usar dropdown)
+- [ ] Criar funcao `handleSelectVendedores` (se usar dropdown)
 - [ ] Passar dados da banca no formato correto
 - [ ] Configurar props conforme necessidade
 - [ ] Testar responsividade
-- [ ] Verificar funcionalidades de admin (se aplicável)
+- [ ] Verificar funcionalidades de admin (se aplicavel)
 
-## 🔄 Migração de Código Existente
+## Migracao de Codigo Existente
 
-Para migrar código existente:
+Para migrar codigo existente:
 
 1. **Substituir o JSX do card** pelo componente `BancaCard`
-2. **Manter as funções** de estado e handlers
-3. **Passar as props** necessárias
-4. **Remover código duplicado** de animações e estilos
-5. **Testar funcionalidades** específicas de cada página
+2. **Manter as funcoes** de estado e handlers
+3. **Passar as props** necessarias
+4. **Remover codigo duplicado** de animacoes e estilos
+5. **Testar funcionalidades** especificas de cada pagina
 
-## 📈 Benefícios
+## Beneficios
 
-- ✅ **Código reutilizável** e padronizado
-- ✅ **Manutenção simplificada**
-- ✅ **Consistência visual**
-- ✅ **Performance otimizada**
-- ✅ **Funcionalidades centralizadas**
-- ✅ **Fácil personalização** 
+- **Codigo reutilizavel** e padronizado
+- **Manutencao simplificada**
+- **Consistencia visual**
+- **Performance otimizada**
+- **Funcionalidades centralizadas**
+- **Facil personalizacao**
+
+## Escopo Deste Guia
+
+- Este arquivo documenta apenas o uso do `BancaCard` na experiencia de bancas.
+- Regras de carrinho, pedido, preco e categoria devem ser documentadas em arquivos proprios.
+- Para carrinho, consulte: `docs/CARRINHO_USAGE.md`.

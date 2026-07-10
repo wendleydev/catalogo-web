@@ -6,6 +6,7 @@ import banner from "../../../assets/banner.webp";
 import { FaWhatsapp } from "react-icons/fa";
 import { db } from "../../../services/firebaseConnection";
 import { AuthContext } from "../../../contexts/AuthContext";
+import { CartContext } from "../../../contexts/CartContext";
 import OptimizedImageUpload from "../../../components/OptimizedImageUpload/OptimizedImageUpload";
 import defaultProfileImage from "../../../assets/perfil.webp";
 import MenuTopo from "../../../components/MenuTopo/MenuTopo";
@@ -47,8 +48,27 @@ import {
   Edit3,
   Save,
   X,
-  User,
 } from "lucide-react";
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value || 0));
+
+const UNIT_OPTIONS = [
+  { value: "un", label: "Unidade (un)" },
+  { value: "kg", label: "Quilo (kg)" },
+  { value: "g", label: "Grama (g)" },
+  { value: "l", label: "Litro (l)" },
+  { value: "ml", label: "Mililitro (ml)" },
+  { value: "dz", label: "Duzia (dz)" },
+  { value: "maco", label: "Maco" },
+  { value: "bandeja", label: "Bandeja" },
+];
+
+const getUnitLabel = (unitValue) =>
+  UNIT_OPTIONS.find((unit) => unit.value === unitValue)?.label || "Unidade (un)";
 
 const isValidImageUrl = (url) =>
   typeof url === "string" &&
@@ -147,6 +167,7 @@ const Vendedor = () => {
 
   const { bancaId } = useParams();
   const { user } = useContext(AuthContext);
+  const { addItem, updateBancaContext } = useContext(CartContext);
   const navigate = useNavigate();
 
   const [banca, setBanca] = useState(null);
@@ -168,6 +189,14 @@ const Vendedor = () => {
   const [isEditingBancaName, setIsEditingBancaName] = useState(false);
   const [newBancaName, setNewBancaName] = useState("");
   const [showDeleteBancaModal, setShowDeleteBancaModal] = useState(false);
+  const [novoProdutoPreco, setNovoProdutoPreco] = useState("");
+  const [novoProdutoUnidade, setNovoProdutoUnidade] = useState("un");
+  const [editProdutoModal, setEditProdutoModal] = useState({
+    isOpen: false,
+    produto: null,
+    preco: "",
+    unidade: "un",
+  });
 
   // Modal estados
   const [modal, setModal] = useState({
@@ -468,6 +497,15 @@ const Vendedor = () => {
   }, [bancaId]);
 
   useEffect(() => {
+    if (!banca?.id) return;
+    updateBancaContext({
+      bancaId: banca.id,
+      bancaNome: banca.nome,
+      vendedores,
+    });
+  }, [banca?.id, banca?.nome, vendedores, updateBancaContext]);
+
+  useEffect(() => {
     const fetchProdutosExistentes = async () => {
       try {
         const snapshotCategorias = await getDocs(collection(db, "categorias"));
@@ -480,6 +518,8 @@ const Vendedor = () => {
           const produtosData = produtosSnapshot.docs.map((doc) => ({
             id: doc.id,
             nome: doc.data().nome,
+            preco: Number(doc.data().preco || 0),
+            unidade: doc.data().unidade || "un",
             created: doc.data().created,
             images: doc.data().images,
           }));
@@ -566,18 +606,40 @@ const Vendedor = () => {
         return;
       }
 
-      const { nome, images } = produtoSelecionadoDados;
+      const precoNormalizado = Number(novoProdutoPreco);
+      if (Number.isNaN(precoNormalizado) || precoNormalizado < 0) {
+        showModal(
+          "warning",
+          "Preço inválido",
+          "Informe um preço válido para adicionar o produto na banca.",
+          AlertTriangle
+        );
+        return;
+      }
 
+      const { nome, images } = produtoSelecionadoDados;
       // Adicionar o produto à banca no Firestore
       const bancaRef = doc(db, `bancas/${banca.id}`);
       await updateDoc(bancaRef, {
-        produtos: arrayUnion({ id: produtoId, nome, images }),
+        produtos: arrayUnion({
+          id: produtoId,
+          nome,
+          images,
+          preco: precoNormalizado,
+          unidade: novoProdutoUnidade || "un",
+        }),
       });
 
       // Atualizar o estado local dos produtos adicionados
       setProdutosAdicionados((prevProdutos) => [
         ...prevProdutos,
-        { id: produtoId, nome, images },
+        {
+          id: produtoId,
+          nome,
+          images,
+          preco: precoNormalizado,
+          unidade: novoProdutoUnidade || "un",
+        },
       ]);
 
       // Remover o produto da lista de produtos disponíveis
@@ -597,6 +659,8 @@ const Vendedor = () => {
         CheckCircle
       );
       setProdutoSelecionado("");
+      setNovoProdutoPreco("");
+      setNovoProdutoUnidade("un");
       console.log("Produto adicionado com sucesso!");
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
@@ -604,6 +668,70 @@ const Vendedor = () => {
         "error",
         "Erro!",
         "Erro ao adicionar produto. Tente novamente.",
+        XCircle
+      );
+    }
+  };
+
+  const handleOpenEditProdutoModal = (produto) => {
+    setEditProdutoModal({
+      isOpen: true,
+      produto,
+      preco: Number(produto.preco || 0).toFixed(2),
+      unidade: produto.unidade || "un",
+    });
+  };
+
+  const handleCloseEditProdutoModal = () => {
+    setEditProdutoModal({
+      isOpen: false,
+      produto: null,
+      preco: "",
+      unidade: "un",
+    });
+  };
+
+  const handleSaveEditProduto = async () => {
+    if (!editProdutoModal.produto?.id) return;
+    const precoNormalizado = Number(editProdutoModal.preco);
+    if (Number.isNaN(precoNormalizado) || precoNormalizado < 0) {
+      showModal(
+        "warning",
+        "Preço inválido",
+        "Informe um preço válido para salvar.",
+        AlertTriangle
+      );
+      return;
+    }
+
+    const produtosAtualizados = produtosAdicionados.map((produto) =>
+      produto.id === editProdutoModal.produto.id
+        ? {
+            ...produto,
+            preco: precoNormalizado,
+            unidade: editProdutoModal.unidade || "un",
+          }
+        : produto
+    );
+
+    try {
+      await updateDoc(doc(db, `bancas/${banca.id}`), {
+        produtos: produtosAtualizados,
+      });
+      setProdutosAdicionados(produtosAtualizados);
+      handleCloseEditProdutoModal();
+      showModal(
+        "success",
+        "Sucesso!",
+        "Preco e unidade atualizados para a banca.",
+        CheckCircle
+      );
+    } catch (error) {
+      console.error("Erro ao atualizar produto da banca:", error);
+      showModal(
+        "error",
+        "Erro!",
+        "Não foi possível atualizar o produto da banca.",
         XCircle
       );
     }
@@ -637,6 +765,20 @@ const Vendedor = () => {
         XCircle
       );
     }
+  };
+
+  const handleAddToCart = (produto) => {
+    addItem({
+      bancaId: banca?.id,
+      bancaNome: banca?.nome,
+      vendedores,
+      item: {
+        id: produto.id,
+        nome: produto.nome,
+        preco: Number(produto.preco || 0),
+        unidade: produto.unidade || "un",
+      },
+    });
   };
 
   if (isLoading) {
@@ -857,8 +999,8 @@ const Vendedor = () => {
                   Gerenciar Produtos
                 </h3>
 
-                <div className="flex flex-col md:flex-row gap-4 items-end">
-                  <div className="flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div className="md:col-span-2">
                     <label
                       htmlFor="produto"
                       className="block text-sm font-medium text-gray-700 mb-2"
@@ -889,12 +1031,44 @@ const Vendedor = () => {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Preço (R$)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={novoProdutoPreco}
+                      onChange={(e) => setNovoProdutoPreco(e.target.value)}
+                      className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      placeholder="Ex: 12.50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de venda
+                    </label>
+                    <select
+                      value={novoProdutoUnidade}
+                      onChange={(e) => setNovoProdutoUnidade(e.target.value)}
+                      className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      {UNIT_OPTIONS.map((unit) => (
+                        <option key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <button
                     onClick={handleAddProduto}
-                    className="inline-flex items-center text-sm space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-lg transform hover:scale-105"
+                    className="md:col-span-4 inline-flex justify-center items-center text-sm space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-lg transform hover:scale-105"
                   >
                     <Plus size={20} />
-                    <span>Adicionar Produto</span>
+                    <span>Adicionar Produto na Banca</span>
                   </button>
                 </div>
               </div>
@@ -937,15 +1111,40 @@ const Vendedor = () => {
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 text-center">
                         {produto.nome}
                       </h3>
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-400 text-center mt-1">
+                        {formatCurrency(produto.preco)}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 text-center mt-1">
+                        {getUnitLabel(produto.unidade)}
+                      </p>
+
+                      <button
+                        onClick={() => handleAddToCart(produto)}
+                        className="w-full inline-flex mt-3 items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-1.5 px-3 rounded-lg text-sm font-semibold hover:from-emerald-600 hover:to-green-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                        aria-label="Adicionar ao carrinho"
+                        title="Adicionar ao carrinho"
+                      >
+                        <ShoppingBag size={14} />
+                        <span className="hidden sm:inline">Adicionar ao Carrinho</span>
+                      </button>
 
                       {user && user.role === "admin" && (
-                        <button
-                          onClick={() => handleRemoverProduto(produto.id)}
-                          className="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 px-4 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-lg transform hover:scale-105"
-                        >
-                          <Trash2 size={16} />
-                          <span>Remover</span>
-                        </button>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleOpenEditProdutoModal(produto)}
+                            className="inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-lg transform hover:scale-105"
+                          >
+                            <Edit3 size={16} />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            onClick={() => handleRemoverProduto(produto.id)}
+                            className="inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 px-4 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-lg transform hover:scale-105"
+                          >
+                            <Trash2 size={16} />
+                            <span>Remover</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </motion.div>
@@ -1016,6 +1215,63 @@ const Vendedor = () => {
         message={modal.message}
         icon={modal.icon}
       />
+
+      <Modal
+        isOpen={editProdutoModal.isOpen}
+        onClose={handleCloseEditProdutoModal}
+        type="info"
+        title={`Editar ${editProdutoModal.produto?.nome || "produto"}`}
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Preço (R$)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editProdutoModal.preco}
+              onChange={(e) =>
+                setEditProdutoModal((prev) => ({ ...prev, preco: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tipo de venda
+            </label>
+            <select
+              value={editProdutoModal.unidade}
+              onChange={(e) =>
+                setEditProdutoModal((prev) => ({ ...prev, unidade: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              {UNIT_OPTIONS.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-center gap-3 pt-2">
+            <button
+              onClick={handleSaveEditProduto}
+              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Confirmar preço
+            </button>
+            <button
+              onClick={handleCloseEditProdutoModal}
+              className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de Edição do Vendedor */}
       <Modal

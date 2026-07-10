@@ -113,6 +113,10 @@ const NovoProdutoForm = () => {
   const onSubmit = async (data) => {
     try {
       if (!user) throw new Error("Usuário não autenticado.");
+      if (user.role !== "admin") {
+        toast.error("Apenas administradores podem cadastrar produtos.");
+        return;
+      }
 
       let categoriaId = categoriaSelecionada ? categoriaSelecionada : "";
       let imagemProdutoUrl = "";
@@ -170,6 +174,8 @@ const NovoProdutoForm = () => {
 
       const produto = {
         nome: data.nome.toUpperCase(),
+        descricao: data.descricao?.trim() || "",
+        preco: Number(data.preco),
         categoria: categoriaId,
         created: new Date(),
         owner: user.name,
@@ -267,6 +273,45 @@ const NovoProdutoForm = () => {
                 O nome do produto é obrigatório.
               </p>
             )}
+          </div>
+          <div className="mb-5">
+            <label
+              htmlFor="preco"
+              className="block text-xs uppercase mb-2 text-center text-gray-300"
+            >
+              Preço (R$)
+            </label>
+            <input
+              type="number"
+              id="preco"
+              step="0.01"
+              min="0"
+              {...register("preco", {
+                required: true,
+                min: 0,
+              })}
+              className="mt-2 form-input block w-full rounded-xl py-1 px-2 text-gray-800 transition duration-150 ease-in-out sm:text-sm sm:leading-5"
+            />
+            {errors.preco && (
+              <p className="mt-1 text-xs text-red-500">
+                Informe um preço válido.
+              </p>
+            )}
+          </div>
+          <div className="mb-5">
+            <label
+              htmlFor="descricao"
+              className="block text-xs uppercase mb-2 text-center text-gray-300"
+            >
+              Descrição do Produto (opcional)
+            </label>
+            <textarea
+              id="descricao"
+              rows={3}
+              {...register("descricao")}
+              className="mt-2 form-input block w-full rounded-xl py-2 px-2 text-gray-800 transition duration-150 ease-in-out sm:text-sm sm:leading-5"
+              placeholder="Ex.: Produto artesanal feito na feira..."
+            />
           </div>
           <div className="mb-5">
             <label

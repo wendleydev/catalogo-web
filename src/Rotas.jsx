@@ -19,6 +19,8 @@ import Avaliacao from "./Pages/Avaliacao/Avaliacao";
 import Resultados from "./Pages/Avaliacao/Resultados";
 import NotFound from "./Pages/NotFound/NotFound";
 import ImageOptimizationExample from "./examples/ImageOptimizationExample";
+import Carrinho from "./Pages/Carrinho/Carrinho";
+import { CartProvider } from "./contexts/CartContext";
 
 // Páginas protegidas
 import Novo from "./Pages/Categorias/Novo/Novo";
@@ -31,9 +33,10 @@ import Admin from "./Pages/Admin/Admin";
 const Rotas = () => {
   return (
     <AuthProvider>
-      <ScrollTopo />
-      
-      <Routes>
+      <CartProvider>
+        <ScrollTopo />
+
+        <Routes>
         {/* Rotas Públicas */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -47,6 +50,7 @@ const Rotas = () => {
         <Route path="/bancas/:bancaId" element={<Vendedor />} />
         <Route path="/avaliacao" element={<Avaliacao />} />
         <Route path="/resultados" element={<Resultados />} />
+        <Route path="/carrinho" element={<Carrinho />} />
 
         {/* Rotas Protegidas - Requerem Autenticação */}
         <Route
@@ -86,7 +90,8 @@ const Rotas = () => {
 
         {/* Rota 404 - Deve ser sempre a última */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </CartProvider>
     </AuthProvider>
   );
 };

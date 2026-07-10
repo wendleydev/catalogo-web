@@ -1,12 +1,15 @@
 import { useState, useContext, useCallback, useMemo } from "react";
 import { AuthContext } from "../../contexts/AuthContext";
 import { Menu, Home, Info, MapPin, Settings, Clock } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useFeiraStatus } from "./hooks";
 import Logo from "./Logo";
 import FeiraStatus from "./ContagemRegressiva";
 import MenuDesktop from "./MenuDesktop";
 import MenuMobile from "./MenuMobile";
 import ThemeToggleEnhanced from "../ThemeToggleEnhanced";
+import { CartContext } from "../../contexts/CartContext";
 
 /**
  * Componente principal do MenuTopo
@@ -16,6 +19,7 @@ const MenuTopo = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user } = useContext(AuthContext);
+  const { cartCount } = useContext(CartContext);
 
   // Define os itens do menu baseado no papel do usuário
   const menuItems = useMemo(
@@ -98,6 +102,18 @@ const MenuTopo = () => {
         onClose={closeMobileMenu}
         menuItems={menuItems}
       />
+
+      <Link
+        to="/carrinho"
+        className="fixed top-20 right-4 z-50 inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full shadow-2xl transition-all"
+        aria-label="Ir para o carrinho"
+      >
+        <ShoppingBag size={18} />
+        <span className="hidden sm:inline font-semibold text-sm">Carrinho</span>
+        <span className="min-w-6 h-6 rounded-full bg-white text-green-700 text-xs font-bold flex items-center justify-center px-1">
+          {cartCount}
+        </span>
+      </Link>
     </>
   );
 };

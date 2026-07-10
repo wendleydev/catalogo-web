@@ -1,7 +1,6 @@
-import { useState, useEffect, useContext, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { AuthContext } from "../../../contexts/AuthContext";
 import { db } from "../../../services/firebaseConnection";
 import {
   collection,
@@ -133,6 +132,11 @@ const ProductCard = ({ produto, onSelect, onDelete, isAdmin }) => {
     <div className="cursor-pointer" onClick={handleClick}>
       <section className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/50 dark:border-gray-700/50">
         <ProductImage images={produto.images} name={produto.nome} />
+        <div className="px-4 pt-3 pb-4">
+          <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base truncate">
+            {produto.nome}
+          </h4>
+        </div>
 
         {/* Etiqueta simples */}
         <div className="absolute top-3 left-3">
@@ -141,16 +145,18 @@ const ProductCard = ({ produto, onSelect, onDelete, isAdmin }) => {
 
         {/* Botão de deletar para admin */}
         {isAdmin && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(produto);
-            }}
-            className="absolute top-3 right-3 bg-red-500/90 hover:bg-red-600/90 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-110 z-10"
-            aria-label={`Excluir ${produto.nome}`}
-          >
-            <FaTrashAlt size={16} />
-          </button>
+          <div className="absolute top-3 right-3 flex gap-2 z-10">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(produto);
+              }}
+              className="bg-red-500/90 hover:bg-red-600/90 text-white p-2 rounded-full shadow-lg transition-all duration-200 transform hover:scale-110"
+              aria-label={`Excluir ${produto.nome}`}
+            >
+              <FaTrashAlt size={16} />
+            </button>
+          </div>
         )}
       </section>
     </div>
@@ -495,7 +501,6 @@ const ProdutosPorCategoria = () => {
   }, []);
 
   const { idCategoria } = useParams();
-  const { user } = useContext(AuthContext);
   const [allProdutos, setAllProdutos] = useState([]); // Todos os produtos
   const [produtos, setProdutos] = useState([]); // Produtos filtrados
   const [searchTerm, setSearchTerm] = useState("");
@@ -809,7 +814,7 @@ const ProdutosPorCategoria = () => {
                         produto={produto}
                         onSelect={handleProdutoClick}
                         onDelete={handleDeleteClick}
-                        isAdmin={user?.role === "admin"}
+                        isAdmin={false}
                       />
 
                       <AnimatePresence>
@@ -909,6 +914,7 @@ const ProdutosPorCategoria = () => {
           cancelText="Cancelar"
           type="danger"
         />
+
       </main>
     </>
   );

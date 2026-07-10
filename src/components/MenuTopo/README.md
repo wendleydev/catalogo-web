@@ -45,6 +45,12 @@ Menu lateral para dispositivos móveis, incluindo:
 ### 6. **MenuTopo.jsx**
 Componente principal que orquestra todos os outros componentes e gerencia o estado geral.
 
+Inclui tambem o **botao fixo do carrinho** (`/carrinho`):
+- Exibe icone de sacola e contagem total de itens (`CartContext.cartCount`).
+- No desktop: texto "Carrinho" + badge com quantidade.
+- No mobile: apenas icone + badge com quantidade.
+- Posicionado fixo no canto superior direito (`top-20 right-4`).
+
 ## 🔧 Como Usar
 
 ### Importação Simples (Recomendado)
@@ -86,6 +92,7 @@ import { useFeiraStatus, useUserMenu } from '../components/MenuTopo/hooks';
 MenuTopo (Principal)
 ├── useFeiraStatus() → ContagemRegressiva
 ├── useUserMenu() → MenuDesktop
+├── CartContext.cartCount → Botao fixo do carrinho
 ├── Logo
 ├── MenuDesktop
 │   ├── MenuItem

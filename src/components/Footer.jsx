@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import logo1 from "../assets/logo1.webp";
 import prefeituraLogo from "../assets/logo_Buritizeiro.webp";
+import { APP_VERSION } from "../constants/appVersion";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -163,6 +164,7 @@ const Footer = () => {
                   Viva Bem
                 </h3>
                 <p className="text-gray-400 -ml-4 text-sm">Buritizeiro</p>
+                <p className="text-gray-500 -ml-4 text-xs mt-0.5">Versão {APP_VERSION}</p>
               </div>
             </div>
 
@@ -305,10 +307,14 @@ const Footer = () => {
         {/* Seção inferior */}
         <div className="border-t border-gray-800/50 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <span>© {currentYear} Feira Livre de Buritizeiro</span>
-              <span>•</span>
-              <span>Todos os direitos reservados</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-400">
+              <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                <span>© {currentYear} Feira Livre de Buritizeiro</span>
+                <span aria-hidden="true">•</span>
+                <span>Todos os direitos reservados</span>
+              </div>
+              <span className="hidden sm:inline" aria-hidden="true">•</span>
+              <span className="text-gray-500">v{APP_VERSION}</span>
             </div>
 
             <div className="flex items-center space-x-4">

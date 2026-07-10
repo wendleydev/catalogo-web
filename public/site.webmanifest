@@ -2,6 +2,7 @@
     "name": "Feira Livre de Buritizeiro",
     "short_name": "Feira Buritizeiro",
     "description": "Catálogo digital da Feira Livre de Buritizeiro",
+    "version": "2.2.1",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
